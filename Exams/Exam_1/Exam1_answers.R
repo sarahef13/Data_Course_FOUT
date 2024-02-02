@@ -88,7 +88,7 @@ deaths_per_day <- df %>%
 str(deaths_per_day)
 
 deaths_per_day %>% 
-  ggplot(mapping=aes(x=Last_Update, y=Cumulative_Deaths)) +
+  ggplot(mapping=aes(x=as_date(Last_Update), y=Cumulative_Deaths)) +
   geom_point() +
   ggtitle("Cumulative Covid Deaths in the U.S.") +
   xlab("Apr 2020 - Jan 2022")
