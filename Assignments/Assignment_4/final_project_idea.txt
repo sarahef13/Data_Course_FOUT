@@ -1,0 +1,11 @@
+Sarah Fout
+BIOL 3100-001
+Spring 2024
+
+Final Project Idea: compare AI packages' predictions of fly development time (in days) based on biological & environmental variables.
+
+Purpose: determine which model most accurately predicts how old a fly pupa is--based on the pupa's miRNA, demographics, & environmental readings--in order to help future forensic investigators determine a body's (fly host's) time of death.
+
+Dataset: fly pupae miRNA sequence counts organized by development time, species, sex, temperature, and light cycle.  I am still working with Dr. Hjelmen to process the data for my capstone project, so I won't be able to use that here until it's tidied.
+
+Downscaled Version (if needed): EITHER train multiple AI models on just miRNA counts OR get one AI model to utilize multiple growth variables.
