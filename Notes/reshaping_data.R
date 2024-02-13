@@ -70,7 +70,61 @@ bp <- dat %>%
   pivot_longer(starts_with('BP'), names_to = 'visit', values_to = 'BP') %>% 
   mutate(visit = case_when(visit=='BP...8' ~ 1,
                            visit=='BP...10' ~ 2,
-                           visit=='BP...12' ~ 3))
+                           visit=='BP...12' ~ 3)) %>% 
+  separate(BP, into=c('systolic', 'diastolic'))
+
+hr <- dat %>% 
+  select(-starts_with('BP')) %>% 
+  pivot_longer(starts_with('HR'), names_to = 'visit', values_to = 'HR') %>% 
+  mutate(visit = case_when(visit=='HR...9' ~ 1,
+                           visit=='HR...11' ~ 2,
+                           visit=='HR...13' ~ 3))
+
+df <- full_join(bp, hr)
+
+library(janitor)
+df <- df %>% 
+  clean_names() # make column names sensible
+
+df$race %>% unique # find entries to consolidate
+df$hispanic %>% unique 
+df$sex %>% unique 
+
+df <- df %>% 
+  mutate(race = case_when(race == 'Caucasian' | race == 'WHITE' ~ 'White',
+                          TRUE ~ race)) %>% # change weird whites & leave all else as-is
+  mutate(birthdate = paste(year_birth, month_of_birth, day_birth, sep = '-') %>% 
+           as.POSIXct()) %>% 
+  mutate(systolic = systolic %>% as.numeric(),
+         diastolic = diastolic %>% as.numeric()) %>% 
+  mutate(hispanic = case_when(hispanic == 'Not Hispanic' ~ FALSE,
+                              TRUE ~ TRUE)) %>% 
+  select(-pat_id, -month_of_birth, -day_birth, -year_birth)
+
+str(df)
+
+df %>% 
+  ggplot(aes(x=visit, y=hr, color=sex)) +
+  geom_path() +  # use path, NOT line
+  facet_wrap(~race)
+
+df %>% 
+  ggplot(aes(x=visit, color=sex)) +
+  geom_path(aes(y=systolic)) +
+  geom_path(aes(y=diastolic)) +
+  facet_wrap(~race)
+# but this doesn't show which bp type is which!
+df <- df %>% 
+  pivot_longer(cols = c('systolic', 'diastolic'), 
+               names_to = 'bp_type', values_to = 'bp')
+
+df %>% 
+  ggplot(aes(x=visit, y= bp, color=bp_type)) +
+  geom_path() +
+  facet_wrap(~race)
+# now we can color by systolic vs diastolic
+
+
 
 
 
