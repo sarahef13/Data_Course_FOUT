@@ -1,10 +1,13 @@
 1. Are any of your predicted response values from your best model scientifically meaningless? Explain.
 
-Yes. Raising the hypothetical Temperature caused the predicted GrowthRate to become negative.  Assuming the mushrooms started at size zero, they couldn't possibly grow by less than nothing (although they could shrink, if they started larger than size zero).  
-The predicted GrowthRate also became absurdly high as the temperature went down; unless they're some sort of Antarctic mushroom, they're probably not going to grow by >1,000 at <15 degrees.
+Yes. Raising the hypothetical Temperature caused the predicted GrowthRate to become negative.  
+Assuming the mushrooms started at size zero, they couldn't possibly grow by less than nothing (although they could shrink, if they started larger than size zero).  
+The predicted GrowthRate also became absurdly high as the temperature went down; unless they're some sort of Antarctic mushroom, 
+they're probably not going to grow by >1,000 at <15 degrees.
 
 
-2. In your plots, did you find any non-linear relationships? Do a bit of research online and give a link to at least one resource explaining how to deal with modeling non-linear relationships in R.
+2. In your plots, did you find any non-linear relationships? Do a bit of research online and give a link to at least one resource explaining how to deal with 
+modeling non-linear relationships in R.
 
 Assuming GrowthRate cannot actually be negative, all of the relationships are non-linear; each one would have to curve as it neared an asymptote at 0.
 Resources:
