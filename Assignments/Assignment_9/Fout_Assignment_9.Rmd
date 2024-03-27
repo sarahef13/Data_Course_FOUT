@@ -8,22 +8,140 @@ date: "2024-03-27"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Modeling Grad School Admissions
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+### Overview
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+For this data set, the goal is to use a statistical model to predict `admit`.  
+Variables:  
+`admit` = whether a student got admitted to a grad school (0 = no, 1 = yes)  
+`gre` = the student's GRE entrance exam score  
+`gpa` = the student's undergraduate GPA  
+`rank` = the grad school's rank (1 = top-tier, 4 = bottom-tier)  
 
-```{r cars}
-summary(cars)
+### First Look
+
+Gotta load in the libraries and data before anything else:
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(easystats)
+library(GGally)
+library(modelr)
+data <- read_csv('GradSchool_Admissions.csv')
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+First, I peeked at the data in text format:
+```{r}
+glimpse(data)
+```
+Then, I tried viewing the data as-is in graphical format:
+```{r message=FALSE}
+data %>% 
+  ggpairs()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+But I quickly realized that `admit` and `rank` should be factors:
+```{r message=FALSE}
+data %>% 
+  mutate_at(c('admit', 'rank'), as.factor) %>% 
+  ggpairs()
+```
+
+That second set of graphs shows more of what the data actually looks like, though the correlation values in the first set are helpful hints for what variable interactions to focus on.
+
+### Closer Look
+
+Based on the graphs above, it seemed like `gre` and `gpa` interact similarly with `admit`, while each `rank` had a different mean value. To learn more about the interactions between GRE/GPA and school rank, based on admission, I made two plots: one showing GRE, one showing GPA, both faceted by school rank.
+```{r message=FALSE}
+data %>% 
+  ggplot(aes(x=gre, fill=factor(admit))) +
+  geom_density(alpha=0.5) +
+  facet_wrap(~rank) +
+  scale_fill_discrete(name='Admission Status',
+                      labels=c('Denied Entry', 'Accepted')) +
+  ggtitle('GRE Score Density, Factored by School Rank')
+
+data %>% 
+  ggplot(aes(x=gpa, fill=factor(admit))) +
+  geom_density(alpha=0.5) +
+  facet_wrap(~rank) +
+  scale_fill_discrete(name='Admission Status',
+                      labels=c('Denied Entry', 'Accepted')) +
+  ggtitle('GPA Score Density, Factored by School Rank')
+```
+
+Above, it appeared that having higher GRE/GPA scores generally led to acceptance (and low scores to denial), but the middling scores are too overlapped to clarify either way. However, these graphs suggest that each rank has a somewhat different pattern, which may help clarify the result.
+
+### Generating Models
+
+Since GRE & GPA acted similarly while rank had different interactions, the first model that came to mind was:
+```{r message=FALSE}
+model1 <- glm(data = data, 
+              formula = as.logical(admit) ~ (gre + gpa) * rank,
+              family = 'binomial')
+```
+
+However, I figured it'd be beneficial to try a more complicated model...
+```{r message=FALSE}
+model2 <- glm(data = data, 
+              formula = as.logical(admit) ~ gre * gpa * rank,
+              family = 'binomial')
+```
+
+...and some simpler models.
+```{r message=FALSE}
+model3 <- glm(data = data, 
+              formula = as.logical(admit) ~ gre + gpa,
+              family = 'binomial')
+
+model4 <- glm(data = data, 
+              formula = as.logical(admit) ~ gpa * rank,
+              family = 'binomial')
+
+model5 <- glm(data = data, 
+              formula = as.logical(admit) ~ gre + gpa + rank,
+              family = 'binomial')
+```
+
+### Comparing Models
+
+Once the models were made, it was time to compare them.  
+First in a table:
+```{r message=FALSE}
+comparison <- compare_performance(model1, model2, model3, model4, model5,
+                    rank=TRUE)
+comparison
+```
+Then in a graph:
+```{r message=FALSE}
+plot(comparison)
+```
+
+I was surprised to see that `model1` wasn't even in the top two, and the top model (`model5`) didn't involve any interaction terms.
+
+### Comparing Predictions
+
+The next step was to visualize the models' predicted values compared to the actual admission values:
+```{r message=FALSE}
+data %>% 
+  gather_predictions(model1, model2, model3, model4, model5,
+                     type='response') %>% 
+  ggplot(aes(x=admit, y=pred, color=model)) +
+  geom_segment(aes(x=-.25, y=-.25, xend=1.25, yend=1.25),linetype=2, color="hotpink",alpha=.5) +
+  geom_smooth(method = "lm", se=FALSE, alpha=.5) +
+  facet_wrap(~rank) +
+  theme_minimal() +
+  scale_color_viridis_d() +
+  labs(title = "Actual vs Predicted Admissions, Faceted by School Rank",
+       subtitle = "(dashed line indicates perfect overlap between actual & predicted values)")
+```
+
+Unfortunately, it appeared that none of the models do a good job of predicting whether a student will be admitted. The model lines were all nearly horizontal, rather than the ideal diagonal (see dotted lines above), regardless of what school rank was accounted for. It seemed that the typical model's guess was between 0.25-0.5, predicting that a student would likely be denied regardless of their scores or intended school. 
+
+With such poor model performance across the board, I don't see the point in performing a cross-validation; seeing how much worse the models would be with data they weren't trained on would just be sad. However, I would add the code upon request.
+
+On the bright side: because each variable has a set range (for example, GPA can't go above 4.0) and the output is limited between 0-1 by virtue of being a binary response, it's unlikely that the model could generate a scientifically meaningless result-- unlike the penguins example, where the overfit model predicted a bird heavier than a whale.
+
+It is likely that unaccounted variables have more control over admittance than GRE/GPA or school rank do. My guess is that those variables are the student's demographics--including family income--but I can only guess.
+
+
